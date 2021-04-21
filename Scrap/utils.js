@@ -7,10 +7,10 @@
     };
 
     // wait to load a selector
-    const waitingForSelector = async function(selector, times=100) {
+    const waitingForSelector = async function(selector, times=200) {
         for (var i=0; i<times; i++){
             if (document.querySelector(selector)) return document.querySelector(selector)   
-            await delay(10)
+            await delay(20)
         }
         return null
     }
@@ -74,3 +74,7 @@
     }
 
     console.log('se cargo el utils')
+
+
+
+

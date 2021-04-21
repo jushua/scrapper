@@ -46,6 +46,8 @@ async function scrapingProfile (){
             }
         }
 
+
+
     // scrap by sections        
     const getTopInformation = async() => {
         const {topInformation: selector} = cssSelectorProfile
@@ -60,7 +62,7 @@ async function scrapingProfile (){
         await clickOnSelector(selector.buttonContactInfo)
         const phone = document.querySelector(selector.phone)?.innerText
         const email = document.querySelector(selector.email)?.innerText
-        await clickOnSelector(selector.buttonCloseContactInfo)
+        await clickOnSelector(selector.buttonCloseContactInfo,selector.buttonContactInfo )
         return {phone, email}
     }
     const getAbout = async() => {
@@ -131,36 +133,47 @@ async function scrapingProfile (){
 
     // general flow
     const letsScrape = async() => {
+        // list of people
+        const listCSS = '#main > div > div > div:nth-child(1) > ul> li'
+        const elementListCSS = 'div > div > div > div > div > div > span > div > span> span > a'
+        const lista = document.querySelectorAll(listCSS)
+        for(i =0 ; i < lista.length; i++){
+            await lista[i].querySelector(elementListCSS).click()
+            console.log('cargando perfil...', i, 'de', lista.length)
+            await waitingForSelector('[data-control-name="contact_see_more"]')
 
-        const {div,pre,button} = createPopup();
-        pre.innerText = 'start scrapping...'
+            const {div,pre,button} = createPopup();
+            pre.innerText = 'start scrapping...'
+    
+            await autoscrollToElement('body')
+            const topInformation =  await getTopInformation()
+            const contactInfo = await getContactInfo()
+            const about = await getAbout()
+            const experiences = await getExperienceInformation()
+            const educations = await getEducationInformation()
+    
+            //setting object to show
+            const profile = {...topInformation, 
+                contactInfo:contactInfo, 
+                about:about,
+                experiences:experiences,
+                educations:educations
+              }
+            
+            // console.log(JSON.stringify(profile,null,2))
+            pre.innerText = JSON.stringify(profile,null,2)
+            
+            button.addEventListener('click',()=>{
+                div.remove()
+            })
+            
+            // history.go(-2);
+            // await delay(2000);
+        }
 
-        await autoscrollToElement('body')
-        const topInformation =  await getTopInformation()
-        const contactInfo = await getContactInfo()
-        const about = await getAbout()
-        const experiences = await getExperienceInformation()
-        const educations = await getEducationInformation()
-        // console.log(topInformation)
-        // console.log(contactInfo)
-        // console.log(about)
-        // console.log(experiences)
-        // console.log(educations)   
-
-        //setting object to show
-        const profile = {...topInformation, 
-            contactInfo:contactInfo, 
-            about:about,
-            experiences:experiences,
-            educations:educations
-          }
-        pre.innerText = JSON.stringify(profile,null,2)
-        
-        button.addEventListener('click',()=>{
-            div.remove()
-        })
     }
 
+ 
     letsScrape()
     // await clickOnSelector(cssSelectorProfile.topInformation.buttonSeeMoreAbout)
     
