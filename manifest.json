@@ -1,0 +1,11 @@
+{
+    "manifest_version": 3,
+    "name": "Scrapper JB",
+    "version": "1.0",
+    "description": "scrapea info de perfil de likedin",
+    "action": {
+        "default_popup": "app/index.html"
+      },
+    "permissions": ["activeTab", "scripting"]
+}
+
