@@ -14,8 +14,18 @@ function scrapingProfile (){
 
     //utils
     function delay(miliseconds) {
+        // wait ms 
         return new Promise(resolve => setTimeout(resolve, miliseconds));
     };
+
+    async function waitingForSelector(selector, times=100) {
+        for (var i=0; i<times; i++){
+            if (document.querySelector(selector)) return document.querySelector(selector)   
+            await delay(10)
+        }
+        return null
+    }
+
     const autoscrollToElement = async function(cssSelector){
     
         let exists = document.querySelector(cssSelector);
@@ -37,58 +47,156 @@ function scrapingProfile (){
         console.log('finish autoscroll to element %s', cssSelector);
         return new Promise(function(resolve){resolve();});
     };
+    const clickOnSelector = async function(cssSelector, cssSelectorTarget=null){
+        const element = document.querySelector(cssSelector)?.click()
+        if (cssSelector) await waitingForSelector(cssSelectorTarget)
+        // await delay(500)
+    }
+
+    // selectors
     const cssSelectorProfile = {
-            profile:{
+            topInformation:{
                 name: 'div.ph5 > div.mt2 > div > ul >li',
-                resume: 'div.ph5 > div.mt2 > div.mr5 >h2',
+                title: 'div.ph5 > div.mt2 > div.mr5 >h2',
                 country: 'div.ph5 > div.mt2 > div.mr5 > ul.mt1 > li',
-                buttonSeeMore: '[data-control-name="contact_see_more"]',
-                buttonCloseSeeMore: 'button.artdeco-modal__dismiss'
             },
             contactInfo:{
+                buttonContactInfo: '[data-control-name="contact_see_more"]',
+                buttonCloseContactInfo:'button.artdeco-modal__dismiss',
                 phone: 'div > section > ul > li > span',
                 email: 'div > section.pv-contact-info__contact-type.ci-email > div > a'
+            },
+            about:{
+                buttonSeeMoreAbout:'#line-clamp-show-more-button',
+                resume:'section.pv-about-section > p'
+            },
+            experienceInformation:{
+                buttonShowMoroExperience:'#experience-section> div > button',
+                list : '#experience-section > ul > li',
+                groupByCompany:{
+                    identify:'.pv-entity__position-group',
+                    company: 'div.pv-entity__company-summary-info > h3 > span:nth-child(2)',
+                    list: 'section > ul > li',
+                    title: 'div > div > div > div > div > div > h3 > span:nth-child(2)',
+                    date:'div > div > div > div > div > div > div > h4 > span:nth-child(2)',
+                    description: '.pv-entity__description'
+                },
+                default:{
+                    title: 'section > div > div > a > div.pv-entity__summary-info > h3',
+                    company:'section > div > div > a > div.pv-entity__summary-info > p.pv-entity__secondary-title',
+                    date: 'section > div > div > a > div.pv-entity__summary-info > div > h4.pv-entity__date-range > span:nth-child(2)',
+                    description: 'section > div > div > div > p'
+                }
+            },
+            educationInformation:{
+                buttonShowMoroEdu:'#education-section > div > button',
+                list: '#education-section > ul > li',
+                institution :'div > div > a > div.pv-entity__summary-info > div > h3',
+                career : 'div > div > a > div.pv-entity__summary-info > div > p > span:nth-child(2)',
+                date : 'div > div > a > div.pv-entity__summary-info > p > span:nth-child(2)'
             }
         }
 
-    const getContactProfile = async () =>{
+    // scrap by sections        
+    const getTopInformation = async() => {
+        const {topInformation: selector} = cssSelectorProfile
+        const name = document.querySelector(selector.name)?.innerText
+        const title = document.querySelector(selector.title)?.innerText
+        const country = document.querySelector(selector.country)?.innerText
+        return {name, title, country}
+    }
+    const getContactInfo = async() => {
+        console.log('run getContactInfo ...')
+        const {contactInfo: selector} = cssSelectorProfile
+        await clickOnSelector(selector.buttonContactInfo)
+        const phone = document.querySelector(selector.phone)?.innerText
+        const email = document.querySelector(selector.email)?.innerText
+        await clickOnSelector(selector.buttonCloseContactInfo)
+        return {phone, email}
+    }
+    const getAbout = async() => {
+        const {about: selector} = cssSelectorProfile
+        await clickOnSelector(selector.buttonSeeMoreAbout)
+        const resume = document.querySelector(selector.resume)?.innerText
+        return {resume}
+    }
+    const getExperienceInformation = async ()=>{
+        const {experienceInformation:selector} = cssSelectorProfile
+        await clickOnSelector(selector.buttonShowMoroExperience)
+        //get information
+        let experiencesRawList = document.querySelectorAll(selector.list)
+        let experiencesRawArray = Array.from(experiencesRawList)
 
-        const {profile:{
-            name: nameCSS,
-            resume:resumeCSS, 
-            country:countryCSS,
-            buttonSeeMore:buttonSeeMoreCSS,
-            buttonCloseSeeMore:buttonCloseSeeMoreCSS
-        },
-        contactInfo:{
-            phone: phoneCSS,
-            email: emailCSS
-        }} = cssSelectorProfile;
+        const groupCompaniesList = experiencesRawArray.filter(el=>{
+            let groupCompanyExperience = el.querySelectorAll(selector.groupByCompany.identify)  
+            return groupCompanyExperience.length >0
+        })
 
-        const name = document.querySelector(nameCSS)?.innerText
-        const resume = document.querySelector(resumeCSS)?.innerText
-        const country = document.querySelector(countryCSS)?.innerText
+        const uniqueExperienceList = experiencesRawArray.filter(el=>{
+            let groupCompanyExperience = el.querySelectorAll(selector.groupByCompany.identify)  
+            return groupCompanyExperience.length ==0
+        })
         
-        const buttonSeeMore = document.querySelector(buttonSeeMoreCSS)
-        buttonSeeMore.click()
-        await delay(500)
-        const phone = document.querySelector(phoneCSS)?.innerText
-        const email = document.querySelector(emailCSS)?.innerText
-        const buttonCloseSeeMore = document.querySelector(buttonCloseSeeMoreCSS)
-        buttonCloseSeeMore.click()
+        const experiences = uniqueExperienceList.map(el=>{
+            const title = el.querySelector(selector.default.title)?.innerText
+            const date = el.querySelector(selector.default.date)?.innerText
+            const company = el.querySelector(selector.default.company)?.innerText
+            const description = el.querySelector(selector.default.description)?.innerText
+            
+            return {title,date,company,description}
+        })
 
-        await autoscrollToElement('body')
+        for(let i = 0; i< groupCompaniesList.length;i++){
+            const item = groupCompaniesList[i]
+            const company = item.querySelector(selector.groupByCompany.company)?.innerText
+            const itemsCompanyGroupList = item.querySelectorAll(selector.groupByCompany.list)
+            const itemsCompanyGroupArray = Array.from(itemsCompanyGroupList)
 
-        return {name, resume, country, phone, email}
-    };
+            const experiencesData = itemsCompanyGroupArray.map(el=>{
+                const title = el.querySelector(selector.groupByCompany.title)?.innerText
+                const date = el.querySelector(selector.groupByCompany.date)?.innerText
+                const description = el.querySelector(selector.groupByCompany.description)?.innerText
+                
+                return {title,date,company,description}
+            })
 
-    const getProfile = async () => {        
-        const profile = await getContactProfile();
-        console.log('Profile:')
-        console.log(profile)
+            experiences.push(...experiencesData)
+        }
+
+        return experiences
+    }
+    const getEducationInformation = async ()=>{
+        const {educationInformation:selector} = cssSelectorProfile
+        await clickOnSelector(selector.buttonShowMoroEdu)
+
+        const educationItems = document.querySelectorAll(selector.list)
+        const educationArray = Array.from(educationItems)
+        const educations = educationArray.map(el=>{
+            const institution = el.querySelector(selector.institution)?.innerText
+            const career = el.querySelector(selector.career)?.innerText
+            const date = el.querySelector(selector.date)?.innerText
+            return {institution,career,date}
+        })
+        return educations
     }
 
-    getProfile();
+    // general flow
+    const letsScrape = async() => {
+        await autoscrollToElement('body')
+        const topInformation =  await getTopInformation()
+        const contactInfo = await getContactInfo()
+        const about = await getAbout()
+        const experiences = await getExperienceInformation()
+        const educations = await getEducationInformation()
+        console.log(topInformation)
+        console.log(contactInfo)
+        console.log(about)
+        console.log(experiences)
+        console.log(educations)        
+    }
 
+    letsScrape()
+    // await clickOnSelector(cssSelectorProfile.topInformation.buttonSeeMoreAbout)
+    
 }
     
