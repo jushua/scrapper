@@ -4,8 +4,21 @@
     "version": "1.0",
     "description": "scrapea info de perfil de likedin",
     "action": {
-        "default_popup": "app/index.html"
+        "default_popup": "./app/index.html",
+	      "default_icon": {
+          "32": "./app/Image/32.png",
+          "48": "./app/Image/48.png"
+	      }
       },
-    "permissions": ["activeTab", "scripting"]
+    "permissions": ["activeTab", "scripting"],
+    "content_scripts": [
+      {
+      	"matches": ["https://*.linkedin.com/*"],
+        "js": ["./Scrap/utils.js"]
+      }
+    ],
+	"icons": {
+	    "32": "./app/Image/32.png",
+	    "48": "./app/Image/48.png"
+	}
 }
-
