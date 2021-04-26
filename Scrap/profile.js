@@ -1,7 +1,91 @@
 
-async function scrapingProfile (){
+async function scrapingProfile (searchtext){
 
+    // wait ms 
+    function delay(miliseconds) {
 
+        return new Promise(resolve => setTimeout(resolve, miliseconds));
+    };
+
+    // wait to load a selector
+    const waitingForSelector = async function(selector, times=200) {
+        for (var i=0; i<times; i++){
+            if (document.querySelector(selector)) return document.querySelector(selector)   
+            await delay(20)
+        }
+        return null
+    }
+
+    // scrooll until end of selector
+    const autoscrollToElement = async function(cssSelector){
+    
+        let exists = document.querySelector(cssSelector);
+    
+        while(exists){
+            //
+            let maxScrollTop = document.body.clientHeight - window.innerHeight;
+            let elementScrollTop = document.querySelector(cssSelector).offsetHeight
+            let currentScrollTop = window.scrollY    
+    
+            if(maxScrollTop == currentScrollTop || elementScrollTop <= currentScrollTop)
+                break;
+    
+            await delay(20)
+    
+            let newScrollTop = Math.min(currentScrollTop + 50, maxScrollTop);
+            window.scrollTo(0,newScrollTop)
+        }    
+        console.log('finish autoscroll to element %s', cssSelector);
+        return new Promise(function(resolve){resolve();});
+    };
+
+    // click on a selector
+    const clickOnSelector = async function(cssSelector, cssSelectorTarget=null){
+        const element = document.querySelector(cssSelector)?.click()
+        if (cssSelector) await waitingForSelector(cssSelectorTarget)
+        // await delay(500)
+    }
+
+    // crear popup
+    const createPopup = ()=>{
+        const styleDiv = "position: fixed;z-index: 2000;width:100%; top: 0px;left: 0px;overflow: visible;display: flex;align-items: flex-end;background-color: lightgray;font-size: 10px;padding: 10px;";
+        const stylePre = "position: relative;max-height: 400px;overflow: scroll;width: 100%;"
+        const div = document.createElement('div')
+        div.id = "krowdy-message"
+        div.style = styleDiv
+
+        const pre = document.createElement('pre')
+        pre.id = "krowdy-pre"
+        pre.style = stylePre
+
+        const button = document.createElement('button')
+        
+        button.id = "krowdy-button"
+        button.style = "background: gray;border: 2px solid;padding: 8px;"
+        button.innerText ="Aceptar"
+
+        const bodyElement = document.querySelector('div.body')
+        
+        bodyElement.appendChild(div)
+
+        pre.innerText = "Estamos extrayendo la información!!!!"
+        div.appendChild(pre)
+        div.appendChild(button)
+        return {div,pre,button}
+    }
+
+    // Search input
+    const getSearch = async (searchText)=>{
+        const inputSearch = document.querySelector('.search-global-typeahead__input')
+        inputSearch.value = searchText
+        const keycode = new KeyboardEvent('keydown', {'keyCode':13, 'which':13}); 
+        inputSearch.dispatchEvent(keycode);  
+        const listCSS = '#main > div > div > div:nth-child(1) > ul> li'
+        await waitingForSelector(listCSS);
+        return    window.location.href
+    }
+
+    
     // selectors
     const cssSelectorProfile = {
             topInformation:{
@@ -131,52 +215,93 @@ async function scrapingProfile (){
         return educations
     }
 
-    // general flow
-    const letsScrape = async() => {
-        // list of people
-        const listCSS = '#main > div > div > div:nth-child(1) > ul> li'
-        const elementListCSS = 'div > div > div > div > div > div > span > div > span> span > a'
-        const lista = document.querySelectorAll(listCSS)
-        for(i =0 ; i < lista.length; i++){
-            await lista[i].querySelector(elementListCSS).click()
-            console.log('cargando perfil...', i, 'de', lista.length)
-            await waitingForSelector('[data-control-name="contact_see_more"]')
 
-            const {div,pre,button} = createPopup();
-            pre.innerText = 'start scrapping...'
-    
-            await autoscrollToElement('body')
-            const topInformation =  await getTopInformation()
-            const contactInfo = await getContactInfo()
-            const about = await getAbout()
-            const experiences = await getExperienceInformation()
-            const educations = await getEducationInformation()
-    
-            //setting object to show
-            const profile = {...topInformation, 
-                contactInfo:contactInfo, 
-                about:about,
-                experiences:experiences,
-                educations:educations
-              }
-            
-            // console.log(JSON.stringify(profile,null,2))
-            pre.innerText = JSON.stringify(profile,null,2)
-            
-            button.addEventListener('click',()=>{
-                div.remove()
-            })
-            
-            // history.go(-2);
-            // await delay(2000);
-        }
+    const scrapingProfile = async (i,lista)=>{
+        console.log('cargando perfil...', i, 'de', lista.length)
+        await waitingForSelector('[data-control-name="contact_see_more"]')
 
+        const {div,pre,button} = createPopup();
+        pre.innerText = 'start scrapping...'
+
+        await autoscrollToElement('body')
+        const topInformation =  await getTopInformation()
+        const contactInfo = await getContactInfo()
+        const about = await getAbout()
+        const experiences = await getExperienceInformation()
+        const educations = await getEducationInformation()
+
+        //setting object to show
+        const profile = {...topInformation, 
+            contactInfo:contactInfo, 
+            about:about,
+            experiences:experiences,
+            educations:educations
+          }
+        
+        // console.log(JSON.stringify(profile,null,2))
+        pre.innerText = JSON.stringify(profile,null,2)
+        await delay(500)
+        div.remove()
+        // history.go(-1);
+        button.addEventListener('click',()=>{
+            div.remove()
+            // history.go(-1);
+        })
+
+        return profile;
     }
 
+
+
+    // general flow
+    const letsScrape = async(searchtext) => {
+        inicio  = await  getSearch(searchtext);
+        await delay(2000)
+        
+        // list of people
+        const listCSS =  '#main > div > div > div:nth-child(1) > ul>li'
+        const elementLinkCSS = '.app-aware-link'
+        await waitingForSelector(listCSS);
+        delay (500)
+        const lista = document.querySelectorAll(listCSS)
+        links = []
+        for(i =0 ; i < lista.length; i++){
+            links[i] = lista[i].querySelector(elementLinkCSS).getAttribute('href')
+        }
+
+        const profiles = [];
+        for(i =0 ; i < lista.length; i++){
+            
+            // window.location.href =  links[i]
+            await lista[i].querySelector(elementLinkCSS).click()
+            await delay(50)
+            const profile  = await scrapingProfile(i,lista)
+            profiles.push(profile)
+            window.location.href =  inicio
+            await waitingForSelector(listCSS);
+        }
+        return profiles;
+    }
  
-    letsScrape()
+    await letsScrape(searchtext)
     // await clickOnSelector(cssSelectorProfile.topInformation.buttonSeeMoreAbout)
     
 }
     
-scrapingProfile()
+
+
+
+//Comunication
+(function(){
+    // alert("start")
+    chrome.runtime.onConnect.addListener(function(port) {
+        port.onMessage.addListener(function(msg) {
+          const {acction} = msg
+          const {searchtext} = msg
+     
+          switch(acction){
+              case "search": scrapingProfile(searchtext)
+              break;
+          }
+        });
+})})();

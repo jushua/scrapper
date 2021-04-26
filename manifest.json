@@ -14,7 +14,7 @@
     "content_scripts": [
       {
       	"matches": ["https://*.linkedin.com/*"],
-        "js": ["./Scrap/utils.js"]
+        "js": ["./Scrap/profile.js"]
       }
     ],
 	"icons": {

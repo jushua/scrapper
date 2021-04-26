@@ -73,7 +73,15 @@
         return {div,pre,button}
     }
 
-    console.log('se cargo el utils')
+    // Search input
+    const getSearch = async (searchText)=>{
+        const inputSearch = document.querySelector('.search-global-typeahead__input')
+        inputSearch.value = searchText
+        const keycode = new KeyboardEvent('keydown', {'keyCode':13, 'which':13}); 
+        inputSearch.dispatchEvent(keycode);  
+    }
+
+    console.log('se cargo el utils');
 
 
 
